@@ -2,17 +2,34 @@ defmodule CartServer do
   use GenServer
 
   # client-facing
-  def start_link do
-    GenServer.start_link(CartServer, %{}, name: :cart_server)
+  def start_link(name) do
+    IO.puts("Cart Server starting...")
+    GenServer.start_link(CartServer, %{}, name: name)
   end
 
-  def cart_total, do: GenServer.call(:cart_server, :total)
+  def start_child(name) when is_atom(name) do
+    IO.puts("Cart Server #{name} starting...")
+    DynamicSupervisor.start_child(:dynamic_cart_supervisor, {CartServer, name})
+  end
 
-  def add_item(item), do: GenServer.cast(:cart_server, {:add_item, item})
+  def cart_total(cart_id) when is_atom(cart_id), do: GenServer.call(cart_id, :total)
 
-  def get_cart, do: GenServer.call(:cart_server, :get_cart)
+  def add_item(cart_id, item) when is_atom(cart_id),
+    do: GenServer.cast(cart_id, {:add_item, item})
+
+  def get_cart(cart_id) when is_atom(cart_id), do: GenServer.call(cart_id, :get_cart)
 
   # callbacks
+  def child_spec(name) do
+    %{
+      id: __MODULE__,
+      restart: :permanent,
+      shutdown: 5000,
+      start: {__MODULE__, :start_link, [name]},
+      type: :worker
+    }
+  end
+
   @impl true
   def init(_state) do
     {:ok, %{cart: [], timer_pid: nil}}
