@@ -1,5 +1,43 @@
 import Config
 
+# --- load .env (local only) ---
+if File.exists?(".env") do
+  ".env"
+  |> File.read!()
+  |> String.split("\n")
+  |> Enum.each(fn line ->
+    line = String.trim(line)
+
+    if line != "" and not String.starts_with?(line, "#") do
+      case String.split(line, "=", parts: 2) do
+        [key, value] ->
+          System.put_env(String.trim(key), String.trim(value))
+
+        _ ->
+          :ok
+      end
+    end
+  end)
+end
+
+# --- database (dev + prod) ---
+database_url = System.get_env("DATABASE_URL")
+
+if database_url do
+  config :faith_orchard, FaithOrchard.Repo,
+    url: database_url,
+    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "5"),
+    ssl: [cacerts: :public_key.cacerts_get()]
+else
+  # Fail clearly instead of "missing :database"
+  raise """
+  DATABASE_URL is not set.
+
+  Create a .env file in the project root with:
+  DATABASE_URL=postgresql://USER:PASSWORD@HOST/neondb?sslmode=require
+  """
+end
+
 # config/runtime.exs is executed for all environments, including
 # during releases. It is executed after compilation and before the
 # system starts, so it is typically used to load production configuration
@@ -41,23 +79,6 @@ if config_env() == :dev do
 end
 
 if config_env() == :prod do
-  database_url =
-    System.get_env("DATABASE_URL") ||
-      raise """
-      environment variable DATABASE_URL is missing.
-      For example: ecto://USER:PASS@HOST/DATABASE
-      """
-
-  maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
-
-  config :faith_orchard, FaithOrchard.Repo,
-    # ssl: true,
-    url: database_url,
-    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
-    # For machines with several cores, consider starting multiple pools of `pool_size`
-    # pool_count: 4,
-    socket_options: maybe_ipv6
-
   # The secret key base is used to sign/encrypt cookies and other secrets.
   # A default value is used in config/dev.exs and config/test.exs but you
   # want to use a different value for prod and you most likely don't want

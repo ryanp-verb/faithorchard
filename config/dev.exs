@@ -2,11 +2,15 @@ import Config
 
 # Configure your database
 config :faith_orchard, FaithOrchard.Repo,
-  url: System.get_env("DATABASE_URL"),
   stacktrace: true,
-  show_sensitive_data_on_connection_error: true,
-  pool_size: 5,
-  ssl: [cacerts: :public_key.cacerts_get()]
+  show_sensitive_data_on_connection_error: true
+
+# config :faith_orchard, FaithOrchard.Repo,
+#   url: System.get_env("DATABASE_URL"),
+#   stacktrace: true,
+#   show_sensitive_data_on_connection_error: true,
+#   pool_size: 5,
+#   ssl: [cacerts: :public_key.cacerts_get()]
 
 # For development, we disable any cache and enable
 # debugging and code reloading.
